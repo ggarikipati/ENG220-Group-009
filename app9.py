@@ -2,27 +2,29 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import os
 
-# Set page config
-st.set_page_config(
-    page_title="Weapon Arrests Analysis",
-    page_icon="🚔",
-    layout="wide"
-)
+# Title of the app
+st.title("Group-009")
 
-def load_data():
-    monthly_data = pd.read_csv("weapon_arrests_monthly.csv")
-    summary_data = pd.read_csv("weapon_arrests_summary.csv")
-    monthly_averages = pd.read_csv("weapon_arrests_monthly_averages.csv")
-    return monthly_data, summary_data, monthly_averages
+st.markdown("""
+### Firearm Arrests Analysis Dashboard
 
+In this project, the objective is to analyze data related to firearm arrests and compare them both annually and monthly, focusing on the state of New Mexico.  
+The data used for this project was obtained directly from the **Federal Bureau of Investigation**.  
+
+From analyzing the data, we can observe that from **2018 to 2023**, arrests related to gun violence have increased dramatically.  
+This trend could be attributed to **policy failures** or to more **effective data collection and analysis methods** over the years.
+""")
+
+# Load CSVs using os.path.join
 try:
-    monthly_data, summary_data, monthly_averages = load_data()
+    base_dir = os.path.dirname(__file__)
+    monthly_data = pd.read_csv(os.path.join(base_dir, '..', 'weapon_arrests_monthly.csv'))
+    summary_data = pd.read_csv(os.path.join(base_dir, '..', 'weapon_arrests_summary.csv'))
+    monthly_averages = pd.read_csv(os.path.join(base_dir, '..', 'weapon_arrests_monthly_averages.csv'))
 
-    st.title("🚔 Weapon-Related Arrests Analysis Dashboard")
-    st.markdown("Analysis of weapon-related arrests from 2018 to 2023")
-
-    # Year range selector (moved from sidebar to main)
+    # Year selector moved to main content
     st.markdown("### 📆 Select Year Range")
     years = sorted(monthly_data['Year'].unique())
     year_range = st.select_slider(
@@ -32,11 +34,10 @@ try:
     )
 
     filtered_data = monthly_data[
-        (monthly_data['Year'] >= year_range[0]) &
+        (monthly_data['Year'] >= year_range[0]) & 
         (monthly_data['Year'] <= year_range[1])
     ]
 
-    # Metric cards
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total Arrests", f"{filtered_data['Arrests'].sum():,.0f}")
@@ -48,7 +49,6 @@ try:
     with col4:
         st.metric("Trend", "📈" if yoy_change > 0 else "📉")
 
-    # Tabs
     tab1, tab2, tab3, tab4 = st.tabs([
         "Monthly Trends", 
         "Year-over-Year Comparison",
@@ -58,7 +58,6 @@ try:
 
     with tab1:
         st.subheader("Monthly Arrest Trends")
-
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=filtered_data['Year_Month'],
@@ -90,23 +89,27 @@ try:
     with tab2:
         st.subheader("Year-over-Year Comparison")
 
-        # Line chart
         yearly_comparison = filtered_data.pivot(index='Month', columns='Year', values='Arrests')
-        fig = px.line(yearly_comparison, title='Year-over-Year Comparison by Month',
-                      labels={'value': 'Number of Arrests', 'Month': 'Month'})
+        fig = px.line(
+            yearly_comparison,
+            title='Year-over-Year Comparison by Month',
+            labels={'value': 'Number of Arrests', 'Month': 'Month'}
+        )
         fig.update_layout(hovermode='x unified')
         st.plotly_chart(fig, use_container_width=True)
 
-        # Heatmap
         yoy_pivot = filtered_data.pivot(index='Year', columns='Month', values='YoY_Change')
-        fig_heatmap = px.imshow(yoy_pivot, title='Year-over-Year Change Heatmap (%)',
-                                color_continuous_scale='RdYlBu', aspect='auto')
+        fig_heatmap = px.imshow(
+            yoy_pivot,
+            title='Year-over-Year Change Heatmap (%)',
+            color_continuous_scale='RdYlBu',
+            aspect='auto'
+        )
         st.plotly_chart(fig_heatmap, use_container_width=True)
 
     with tab3:
         st.subheader("Seasonal Patterns")
 
-        # Bar chart with error bars
         fig = px.bar(
             monthly_averages,
             x='Month',
@@ -118,7 +121,6 @@ try:
         fig.update_layout(xaxis_title='Month', yaxis_title='Average Arrests')
         st.plotly_chart(fig, use_container_width=True)
 
-        # Box plot
         fig = px.box(
             filtered_data,
             x='Month',
@@ -143,7 +145,6 @@ try:
         )
 
         col1, col2 = st.columns(2)
-
         with col1:
             st.markdown("#### 📊 Monthly Averages")
             st.dataframe(
@@ -179,7 +180,7 @@ except Exception as e:
     st.error(f"""
         ❌ Error loading data: {str(e)}
 
-        Please ensure these files exist in the same directory:
+        Please ensure these files exist in the root directory:
         - weapon_arrests_monthly.csv
         - weapon_arrests_summary.csv
         - weapon_arrests_monthly_averages.csv
